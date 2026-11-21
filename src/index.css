@@ -1,0 +1,522 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   UNIVERSAL 60FPS BUTTON & TOUCH ENGINE (سرعة استجابة فائقة وخالية من التأخير)
+   ========================================================================= */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
+/* Eliminate 300ms tap delay and optimize touch responsiveness across all devices */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+.btn-interactive {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Instantaneous 240Hz tactile feedback on buttons without bloating GPU layer memory */
+button,
+[role="button"],
+.btn-interactive,
+input[type="button"],
+input[type="submit"] {
+  position: relative;
+  transition: transform 0.1s cubic-bezier(0.2, 0.9, 0.3, 1),
+              opacity 0.08s ease;
+}
+
+/* Hover: subtle micro-lift with zero layout cost */
+button:hover:not(:disabled),
+[role="button"]:hover:not(:disabled),
+.btn-interactive:hover {
+  transform: translate3d(0, -1px, 0) scale(1.012);
+}
+
+/* Active / Click: instantaneous tactile press (0ms response delay) */
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled),
+.btn-interactive:active {
+  transform: scale(0.955) translate3d(0, 0, 0) !important;
+  transition-duration: 0.045s !important;
+}
+
+/* Focused via keyboard */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid rgba(var(--app-accent-rgb), 0.75);
+  outline-offset: 2px;
+}
+
+/* Disabled buttons */
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none !important;
+}
+
+/* Smooth child icon scaling */
+button:hover:not(:disabled) svg,
+[role="button"]:hover:not(:disabled) svg {
+  transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+button:active:not(:disabled) svg,
+[role="button"]:active:not(:disabled) svg {
+  transform: scale(0.94);
+}
+
+/* 240Hz Hardware Accelerated Compositor Classes */
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  contain: layout style;
+}
+
+@layer utilities {
+  /* Standard smooth fade in */
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /* Slide up entrance with 60fps GPU translate3d */
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 24px, 0) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  /* Slide down entrance with 60fps GPU translate3d */
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -20px, 0) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  /* Pop scale entrance */
+  @keyframes popScale {
+    0% {
+      opacity: 0;
+      transform: scale(0.88);
+    }
+    70% {
+      transform: scale(1.03);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Subtle pulsing glow for badges & actions */
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.82;
+      transform: scale(1.04);
+    }
+  }
+
+  /* Glowing Purple Neon Energy Line Travel Animation */
+  @keyframes energyTrace {
+    0% {
+      stroke-dashoffset: 1000;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes energyTraceReverse {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -1000;
+    }
+  }
+
+  /* Center SQ Button 3D Floating & Breathing Animation */
+  @keyframes floatBreathing {
+    0% {
+      transform: translateY(0px) scale(1);
+      box-shadow: 0 10px 25px -5px rgba(var(--app-accent-rgb), 0.5), 0 0 20px rgba(var(--app-accent-secondary-rgb), 0.4);
+    }
+    50% {
+      transform: translateY(-7px) scale(1.05);
+      box-shadow: 0 18px 35px -3px rgba(var(--app-accent-rgb), 0.75), 0 0 35px rgba(var(--app-accent-bright-rgb), 0.6), 0 0 50px rgba(var(--app-accent-secondary-rgb), 0.4);
+    }
+    100% {
+      transform: translateY(0px) scale(1);
+      box-shadow: 0 10px 25px -5px rgba(var(--app-accent-rgb), 0.5), 0 0 20px rgba(var(--app-accent-secondary-rgb), 0.4);
+    }
+  }
+
+  /* Floating Shadow under SQ Button */
+  @keyframes floatShadow {
+    0% {
+      transform: scale(0.9) translateY(0);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.15) translateY(2px);
+      opacity: 0.25;
+    }
+    100% {
+      transform: scale(0.9) translateY(0);
+      opacity: 0.5;
+    }
+  }
+
+  /* Pulsing Glow Rings */
+  @keyframes pulseGlowRing {
+    0% {
+      transform: scale(0.85);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.35);
+      opacity: 0.25;
+    }
+    100% {
+      transform: scale(1.65);
+      opacity: 0;
+    }
+  }
+
+  @keyframes pulseGlowRingDelayed {
+    0% {
+      transform: scale(0.85);
+      opacity: 0;
+    }
+    30% {
+      transform: scale(0.95);
+      opacity: 0.7;
+    }
+    70% {
+      transform: scale(1.4);
+      opacity: 0.2;
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+
+  /* Glass Surface Specular Sheen Sweep */
+  @keyframes glassSheenSweep {
+    0% {
+      transform: translateX(-150%) skewX(-25deg);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.75;
+    }
+    45% {
+      opacity: 0.75;
+    }
+    60% {
+      transform: translateX(250%) skewX(-25deg);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(250%) skewX(-25deg);
+      opacity: 0;
+    }
+  }
+
+  /* Button Click Ripple */
+  @keyframes navRipple {
+    0% {
+      transform: scale(0);
+      opacity: 0.85;
+    }
+    100% {
+      transform: scale(3.5);
+      opacity: 0;
+    }
+  }
+
+  /* Active Glow Burst */
+  @keyframes activeBurst {
+    0% {
+      transform: scale(0.75);
+      opacity: 0.9;
+    }
+    50% {
+      transform: scale(1.25);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Rotating Shimmer on Center SQ Button */
+  @keyframes rotateSheen {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Theme Neon Shockwave Expanding from SQ Button */
+  @keyframes purpleShockwavePulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 1;
+      box-shadow: 0 0 30px rgba(var(--app-accent-bright-rgb), 1), 0 0 60px rgba(var(--app-accent-rgb), 0.85), inset 0 0 20px rgba(255, 255, 255, 0.9);
+    }
+    35% {
+      opacity: 0.85;
+    }
+    70% {
+      opacity: 0.45;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(24);
+      opacity: 0;
+      box-shadow: 0 0 100px rgba(var(--app-accent-rgb), 0), 0 0 140px rgba(var(--app-accent-secondary-rgb), 0);
+    }
+  }
+
+  /* Secondary Pulse Wave */
+  @keyframes magentaShockwavePulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.15);
+      opacity: 0.95;
+      box-shadow: 0 0 25px rgba(var(--app-accent-secondary-rgb), 0.9), 0 0 50px rgba(var(--app-accent-rgb), 0.7);
+    }
+    40% {
+      opacity: 0.75;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(20);
+      opacity: 0;
+      box-shadow: 0 0 90px rgba(var(--app-accent-secondary-rgb), 0), 0 0 130px rgba(var(--app-accent-rgb), 0);
+    }
+  }
+
+  /* Shockwave Energy Pulse Expanding from SQ Button */
+  @keyframes shockwavePulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.3);
+      opacity: 0.95;
+      box-shadow: 0 0 20px rgba(var(--app-accent-rgb), 0.9), 0 0 40px rgba(var(--app-accent-bright-rgb), 0.6);
+    }
+    40% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(22);
+      opacity: 0;
+      box-shadow: 0 0 80px rgba(var(--app-accent-rgb), 0), 0 0 120px rgba(var(--app-accent-bright-rgb), 0);
+    }
+  }
+
+  /* Light sweep across modal panel top rim */
+  @keyframes panelLightSweep {
+    0% {
+      transform: translateX(-150%);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.9;
+    }
+    80% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateX(250%);
+      opacity: 0;
+    }
+  }
+
+  /* Theme Active Glow Breathing */
+  @keyframes neonGreenGlow {
+    0% {
+      box-shadow: 0 0 12px rgba(var(--app-accent-rgb), 0.35), 0 0 24px rgba(var(--app-accent-rgb), 0.15);
+    }
+    50% {
+      box-shadow: 0 0 22px rgba(var(--app-accent-rgb), 0.6), 0 0 40px rgba(var(--app-accent-rgb), 0.3);
+    }
+    100% {
+      box-shadow: 0 0 12px rgba(var(--app-accent-rgb), 0.35), 0 0 24px rgba(var(--app-accent-rgb), 0.15);
+    }
+  }
+}
+
+.animate-energy-trace {
+  animation: energyTrace 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-energy-trace-reverse {
+  animation: energyTraceReverse 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-float-breathing {
+  animation: floatBreathing 3.6s ease-in-out infinite;
+}
+
+.animate-float-shadow {
+  animation: floatShadow 3.6s ease-in-out infinite;
+}
+
+.animate-pulse-ring-1 {
+  animation: pulseGlowRing 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.animate-pulse-ring-2 {
+  animation: pulseGlowRingDelayed 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.animate-glass-sheen {
+  animation: glassSheenSweep 6s ease-in-out infinite;
+}
+
+.animate-nav-ripple {
+  animation: navRipple 0.65s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+.animate-active-burst {
+  animation: activeBurst 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-rotate-sheen {
+  animation: rotateSheen 8s linear infinite;
+}
+
+.animate-shockwave-purple {
+  animation: purpleShockwavePulse 1.5s cubic-bezier(0.12, 0.8, 0.22, 1) forwards;
+}
+
+.animate-shockwave-magenta {
+  animation: magentaShockwavePulse 1.7s 0.12s cubic-bezier(0.12, 0.8, 0.22, 1) forwards;
+}
+
+.animate-shockwave-1 {
+  animation: shockwavePulse 1.2s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.animate-shockwave-2 {
+  animation: shockwavePulse 1.4s 0.15s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.animate-panel-light-sweep {
+  animation: panelLightSweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-neon-green-glow {
+  animation: neonGreenGlow 2.8s ease-in-out infinite;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+.animate-slideUp {
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+.animate-slideDown {
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+.animate-popScale {
+  animation: popScale 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+/* =========================================================================
+   iOS SAFARI & APPLE WEB APP (iPhone / iPad) OPTIMIZATIONS
+   ========================================================================= */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --app-accent: #A855F7;
+  --app-accent-bright: #C084FC;
+  --app-accent-light: #E9D5FF;
+  --app-accent-solid: #9333EA;
+  --app-accent-solid-hover: #A855F7;
+  --app-accent-contrast: #FFFFFF;
+  --app-accent-secondary: #6366F1;
+  --app-accent-tertiary: #818CF8;
+  --app-accent-deep: #3B0764;
+  --app-accent-surface: #160E29;
+  --app-accent-surface-hover: #21153D;
+  --app-accent-rgb: 168, 85, 247;
+  --app-accent-bright-rgb: 192, 132, 252;
+  --app-accent-secondary-rgb: 99, 102, 241;
+  --app-accent-tertiary-rgb: 129, 140, 248;
+  --app-accent-grad: linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #6366F1 100%);
+}
+
+html, body {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  touch-action: pan-x pan-y;
+}
+
+.ios-pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.ios-pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.ios-safe-screen {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+

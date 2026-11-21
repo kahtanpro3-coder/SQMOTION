@@ -1,0 +1,8 @@
+{
+  "name": " SQMOTION 1",
+  "description": "Professional vector motion graphics, keyframe animation engine, GLSL shader effects, and video editor from scratch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

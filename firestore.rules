@@ -1,0 +1,330 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'handle', 'role', 'bio', 'location', 'website', 'email', 'photoURL', 'bannerURL', 'specialties', 'provider', 'isPro', 'isPrivateAccount', 'dmPrivacy', 'createdAt', 'lastLoginAt', 'updatedAt']) &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        (!('handle' in data) || (data.handle is string && data.handle.size() <= 48 && data.handle.matches('^[a-zA-Z0-9_.-]{0,48}$'))) &&
+        (!('role' in data) || (data.role is string && data.role.size() <= 80)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 360)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 80)) &&
+        (!('website' in data) || (data.website is string && data.website.size() <= 200)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 200000)) &&
+        (!('bannerURL' in data) || (data.bannerURL is string && data.bannerURL.size() <= 200000)) &&
+        (!('specialties' in data) || (data.specialties is list && data.specialties.size() <= 8)) &&
+        (!('provider' in data) || (data.provider is string && data.provider.size() <= 40)) &&
+        (!('isPro' in data) || data.isPro is bool) &&
+        (!('isPrivateAccount' in data) || data.isPrivateAccount is bool) &&
+        (!('dmPrivacy' in data) || (data.dmPrivacy in ['everyone', 'followers']));
+    }
+
+    function isValidFavoritesLibrary(data) {
+      return data.keys().hasAll(['uid', 'items', 'folders', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'items', 'folders', 'recentIds', 'updatedAt', 'syncedAt']) &&
+        data.uid == request.auth.uid &&
+        data.items is list && data.items.size() <= 400 &&
+        data.folders is list && data.folders.size() <= 60 &&
+        (!('recentIds' in data) || (data.recentIds is list && data.recentIds.size() <= 50)) &&
+        data.updatedAt is number;
+    }
+
+    function isValidCloudProject(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'settings', 'layers', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerId', 'name', 'settings', 'layers', 'layerCount', 'updatedAt', 'syncedAt', 'thumbnail']) &&
+        data.ownerId == request.auth.uid &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.settings is map &&
+        data.layers is list && data.layers.size() <= 200 &&
+        (!('layerCount' in data) || data.layerCount is number) &&
+        (!('thumbnail' in data) || (data.thumbnail is string && data.thumbnail.size() <= 200000)) &&
+        data.updatedAt is number;
+    }
+
+    function isValidCommunityTemplate(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'name', 'settings', 'layers', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'authorId', 'authorName', 'name', 'description', 'settings', 'layers', 'createdAt', 'updatedAt', 'syncedAt']) &&
+        data.authorId == request.auth.uid &&
+        isValidId(data.id) &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 400)) &&
+        data.settings is map &&
+        data.layers is list && data.layers.size() <= 80 &&
+        data.createdAt is number;
+    }
+
+    // User private profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && incoming().uid == existing().uid;
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // User cloud favorites
+    match /users/{userId}/favorites/{docId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(docId) && isValidFavoritesLibrary(incoming());
+      allow update: if isOwner(userId) && isValidId(docId) && isValidFavoritesLibrary(incoming()) && incoming().uid == existing().uid;
+      allow delete: if isOwner(userId) && isValidId(docId);
+    }
+
+    // User cloud projects
+    match /users/{userId}/projects/{projectId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(projectId) && isValidCloudProject(incoming());
+      allow update: if isOwner(userId) && isValidId(projectId) && isValidCloudProject(incoming()) && incoming().ownerId == existing().ownerId;
+      allow delete: if isOwner(userId) && isValidId(projectId);
+    }
+
+    function isValidUserNotification(data, userId, notifId) {
+      return data.keys().hasAll(['id', 'recipientId', 'senderId', 'kind', 'textPreview', 'read', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'recipientId', 'senderId', 'senderName', 'senderHandle', 'senderPhoto', 'kind', 'threadId', 'messageId', 'roomId', 'videoId', 'textPreview', 'read', 'createdAt']) &&
+        isValidId(data.id) && data.id == notifId &&
+        isValidId(data.recipientId) && data.recipientId == userId &&
+        isValidId(data.senderId) &&
+        data.kind in ['dm_message', 'dm_reply', 'room_reply', 'follow', 'video_comment', 'video_like'] &&
+        (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 120)) &&
+        (!('senderHandle' in data) || (data.senderHandle is string && data.senderHandle.size() <= 48)) &&
+        (!('senderPhoto' in data) || (data.senderPhoto is string && data.senderPhoto.size() <= 200000)) &&
+        (!('threadId' in data) || (data.threadId is string && data.threadId.size() <= 128)) &&
+        (!('messageId' in data) || (data.messageId is string && data.messageId.size() <= 128)) &&
+        (!('roomId' in data) || (data.roomId is string && data.roomId.size() <= 128)) &&
+        (!('videoId' in data) || (data.videoId is string && data.videoId.size() <= 128)) &&
+        data.textPreview is string && data.textPreview.size() <= 400 &&
+        data.read is bool &&
+        data.createdAt is number;
+    }
+
+    // User private real-time notifications inbox
+    match /users/{userId}/notifications/{notifId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isSignedIn() && isValidId(userId) && isValidId(notifId) && isValidUserNotification(incoming(), userId, notifId) && incoming().senderId == request.auth.uid && incoming().read == false;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(notifId) && isValidUserNotification(incoming(), userId, notifId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']) && incoming().senderId == existing().senderId && incoming().recipientId == existing().recipientId && incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(notifId);
+    }
+
+    // Community online templates
+    match /community_templates/{templateId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isValidId(templateId) && isValidCommunityTemplate(incoming());
+      allow update: if isSignedIn() && isValidId(templateId) && isValidCommunityTemplate(incoming()) && existing().authorId == request.auth.uid && incoming().authorId == existing().authorId;
+      allow delete: if isSignedIn() && isValidId(templateId) && existing().authorId == request.auth.uid;
+    }
+
+    function isValidPublicCreator(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'handle', 'role', 'bio', 'location', 'photoURL', 'specialties', 'followersCount', 'followingCount', 'videosCount', 'isPrivateAccount', 'dmPrivacy', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        (!('handle' in data) || (data.handle is string && data.handle.size() <= 48 && data.handle.matches('^[a-zA-Z0-9_.-]{0,48}$'))) &&
+        (!('role' in data) || (data.role is string && data.role.size() <= 80)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 360)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 80)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 200000)) &&
+        (!('specialties' in data) || (data.specialties is list && data.specialties.size() <= 8)) &&
+        (!('followersCount' in data) || (data.followersCount is number && data.followersCount >= 0)) &&
+        (!('followingCount' in data) || (data.followingCount is number && data.followingCount >= 0)) &&
+        (!('videosCount' in data) || (data.videosCount is number && data.videosCount >= 0)) &&
+        (!('isPrivateAccount' in data) || data.isPrivateAccount is bool) &&
+        (!('dmPrivacy' in data) || (data.dmPrivacy in ['everyone', 'followers'])) &&
+        data.updatedAt is number;
+    }
+
+    function isValidFollowerRecord(data, creatorId, followerId) {
+      return data.keys().hasAll(['followerId', 'targetId', 'createdAt']) &&
+        data.keys().hasOnly(['followerId', 'targetId', 'followerName', 'followerHandle', 'followerPhoto', 'createdAt']) &&
+        data.followerId == request.auth.uid &&
+        data.followerId == followerId &&
+        data.targetId == creatorId &&
+        (!('followerName' in data) || (data.followerName is string && data.followerName.size() <= 120)) &&
+        (!('followerHandle' in data) || (data.followerHandle is string && data.followerHandle.size() <= 48)) &&
+        (!('followerPhoto' in data) || (data.followerPhoto is string && data.followerPhoto.size() <= 200000)) &&
+        data.createdAt is number;
+    }
+
+    function isValidDmThread(data) {
+      return data.keys().hasAll(['id', 'participants', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'participants', 'participantMeta', 'lastMessage', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.participants is list && data.participants.size() == 2 &&
+        request.auth.uid in data.participants &&
+        (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500)) &&
+        data.updatedAt is number;
+    }
+
+    function isValidDmMessage(data) {
+      return data.keys().hasAll(['id', 'senderId', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'senderId', 'senderName', 'text', 'videoId', 'replyToId', 'replyToSender', 'replyToText', 'createdAt']) &&
+        isValidId(data.id) &&
+        data.senderId == request.auth.uid &&
+        (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 120)) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 2000 &&
+        (!('videoId' in data) || (data.videoId is string && data.videoId.size() <= 128)) &&
+        (!('replyToId' in data) || (data.replyToId is string && data.replyToId.size() <= 128)) &&
+        (!('replyToSender' in data) || (data.replyToSender is string && data.replyToSender.size() <= 120)) &&
+        (!('replyToText' in data) || (data.replyToText is string && data.replyToText.size() <= 240)) &&
+        data.createdAt is number;
+    }
+
+    function isValidSocialRoom(data) {
+      return data.keys().hasAll(['id', 'kind', 'name', 'ownerId', 'memberIds', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'kind', 'name', 'description', 'ownerId', 'ownerName', 'memberIds', 'membersCount', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        (data.kind == 'channel' || data.kind == 'group') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 400)) &&
+        isValidId(data.ownerId) &&
+        (!('ownerName' in data) || (data.ownerName is string && data.ownerName.size() <= 120)) &&
+        data.memberIds is list && data.memberIds.size() <= 500 &&
+        (!('membersCount' in data) || (data.membersCount is number && data.membersCount >= 0)) &&
+        data.createdAt is number;
+    }
+
+    function isValidRoomMessage(data) {
+      return data.keys().hasAll(['id', 'senderId', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'senderId', 'senderName', 'senderHandle', 'text', 'videoUrl', 'createdAt']) &&
+        isValidId(data.id) &&
+        data.senderId == request.auth.uid &&
+        (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 120)) &&
+        (!('senderHandle' in data) || (data.senderHandle is string && data.senderHandle.size() <= 48)) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 2000 &&
+        (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 500)) &&
+        data.createdAt is number;
+    }
+
+    function isValidSocialVideo(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'title', 'videoUrl', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'authorId', 'authorName', 'authorHandle', 'authorPhoto', 'title', 'description', 'videoUrl', 'posterUrl', 'tags', 'likedBy', 'likesCount', 'commentsCount', 'viewsCount', 'durationSec', 'createdAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.authorId) &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
+        (!('authorHandle' in data) || (data.authorHandle is string && data.authorHandle.size() <= 48)) &&
+        (!('authorPhoto' in data) || (data.authorPhoto is string && data.authorPhoto.size() <= 200000)) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 600)) &&
+        data.videoUrl is string && data.videoUrl.size() >= 1 && data.videoUrl.size() <= 1000 &&
+        (!('posterUrl' in data) || (data.posterUrl is string && data.posterUrl.size() <= 200000)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 10)) &&
+        (!('likedBy' in data) || (data.likedBy is list && data.likedBy.size() <= 500)) &&
+        (!('likesCount' in data) || (data.likesCount is number && data.likesCount >= 0)) &&
+        (!('commentsCount' in data) || (data.commentsCount is number && data.commentsCount >= 0)) &&
+        (!('viewsCount' in data) || (data.viewsCount is number && data.viewsCount >= 0)) &&
+        (!('durationSec' in data) || (data.durationSec is number && data.durationSec >= 0)) &&
+        data.createdAt is number;
+    }
+
+    function isValidVideoComment(data) {
+      return data.keys().hasAll(['id', 'authorId', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'authorId', 'authorName', 'text', 'createdAt']) &&
+        isValidId(data.id) &&
+        data.authorId == request.auth.uid &&
+        (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 120)) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 600 &&
+        data.createdAt is number;
+    }
+
+    // Public creator directory (zero PII)
+    match /public_creators/{creatorId} {
+      allow get, list: if true;
+      allow create: if isOwner(creatorId) && isValidId(creatorId) && isValidPublicCreator(incoming()) && incoming().uid == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(creatorId) && isValidPublicCreator(incoming()) && incoming().uid == existing().uid && (
+        isOwner(creatorId) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followingCount', 'updatedAt'])
+      );
+      allow delete: if isOwner(creatorId) && isValidId(creatorId);
+
+      match /followers/{followerId} {
+        allow get, list: if true;
+        allow create, update: if isOwner(followerId) && isValidId(creatorId) && isValidId(followerId) && isValidFollowerRecord(incoming(), creatorId, followerId);
+        allow delete: if (isOwner(followerId) || isOwner(creatorId)) && isValidId(creatorId) && isValidId(followerId);
+      }
+    }
+
+    // 1:1 Direct Message Threads (participant-only isolation)
+    match /dm_threads/{threadId} {
+      allow get: if isSignedIn() && isValidId(threadId) && request.auth.uid in existing().participants;
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && isValidId(threadId) && isValidDmThread(incoming());
+      allow update: if isSignedIn() && isValidId(threadId) && request.auth.uid in existing().participants && isValidDmThread(incoming()) && incoming().participants == existing().participants;
+
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/dm_threads/$(threadId)).data.participants;
+        allow create: if isSignedIn() && isValidId(messageId) && request.auth.uid in get(/databases/$(database)/documents/dm_threads/$(threadId)).data.participants && isValidDmMessage(incoming());
+        allow delete: if isSignedIn() && isValidId(messageId) && existing().senderId == request.auth.uid;
+      }
+    }
+
+    // Channels & Groups
+    match /social_rooms/{roomId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isValidId(roomId) && isValidSocialRoom(incoming()) && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(roomId) && isValidSocialRoom(incoming()) && incoming().ownerId == existing().ownerId && incoming().kind == existing().kind && (
+        existing().ownerId == request.auth.uid ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['memberIds', 'membersCount', 'updatedAt'])
+      );
+      allow delete: if isSignedIn() && isValidId(roomId) && existing().ownerId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && isValidId(messageId) && isValidRoomMessage(incoming()) && (
+          get(/databases/$(database)/documents/social_rooms/$(roomId)).data.kind == 'group' ||
+          get(/databases/$(database)/documents/social_rooms/$(roomId)).data.ownerId == request.auth.uid
+        );
+        allow delete: if isSignedIn() && isValidId(messageId) && (
+          existing().senderId == request.auth.uid ||
+          get(/databases/$(database)/documents/social_rooms/$(roomId)).data.ownerId == request.auth.uid
+        );
+      }
+    }
+
+    // Video Feed Showcase
+    match /social_videos/{videoId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isValidId(videoId) && isValidSocialVideo(incoming()) && incoming().authorId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(videoId) && isValidSocialVideo(incoming()) && incoming().authorId == existing().authorId && (
+        existing().authorId == request.auth.uid ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likedBy', 'likesCount', 'commentsCount', 'viewsCount'])
+      );
+      allow delete: if isSignedIn() && isValidId(videoId) && existing().authorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && isValidId(commentId) && isValidVideoComment(incoming());
+        allow delete: if isSignedIn() && isValidId(commentId) && (
+          existing().authorId == request.auth.uid ||
+          get(/databases/$(database)/documents/social_videos/$(videoId)).data.authorId == request.auth.uid
+        );
+      }
+    }
+  }
+}

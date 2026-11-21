@@ -1,0 +1,283 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Authenticated SQMOTION creator profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "handle": { "type": "string", "maxLength": 48, "pattern": "^[a-zA-Z0-9_.-]{0,48}$" },
+        "role": { "type": "string", "maxLength": 80 },
+        "bio": { "type": "string", "maxLength": 360 },
+        "location": { "type": "string", "maxLength": 80 },
+        "website": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "photoURL": { "type": "string", "maxLength": 200000 },
+        "bannerURL": { "type": "string", "maxLength": 200000 },
+        "specialties": { "type": "array" },
+        "provider": { "type": "string", "maxLength": 40 },
+        "isPro": { "type": "boolean" },
+        "isPrivateAccount": { "type": "boolean" },
+        "dmPrivacy": { "type": "string", "enum": ["everyone", "followers"] }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "UserFavoritesLibrary": {
+      "title": "User Favorites Library",
+      "description": "Cloud-synced favorites and quick access folders for a user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "items": { "type": "array" },
+        "folders": { "type": "array" },
+        "recentIds": { "type": "array" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["uid", "items", "folders", "updatedAt"]
+    },
+    "UserProjectCloud": {
+      "title": "Cloud Project",
+      "description": "User project backup saved under users/{userId}/projects/{projectId}.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 160 },
+        "settings": { "type": "object" },
+        "layers": { "type": "array" },
+        "layerCount": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "name", "settings", "layers", "updatedAt"]
+    },
+    "CommunityTemplate": {
+      "title": "Community Template",
+      "description": "Publicly shared online motion template created by authenticated users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string", "maxLength": 120 },
+        "name": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 400 },
+        "settings": { "type": "object" },
+        "layers": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "authorId", "authorName", "name", "settings", "layers", "createdAt"]
+    },
+    "PublicCreator": {
+      "title": "Public Creator Card",
+      "description": "Publicly searchable creator identity without PII (no email).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "handle": { "type": "string", "maxLength": 48, "pattern": "^[a-zA-Z0-9_.-]{0,48}$" },
+        "role": { "type": "string", "maxLength": 80 },
+        "bio": { "type": "string", "maxLength": 360 },
+        "location": { "type": "string", "maxLength": 80 },
+        "photoURL": { "type": "string", "maxLength": 200000 },
+        "specialties": { "type": "array" },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" },
+        "videosCount": { "type": "number" },
+        "isPrivateAccount": { "type": "boolean" },
+        "dmPrivacy": { "type": "string", "enum": ["everyone", "followers"] },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["uid", "displayName", "updatedAt"]
+    },
+    "CreatorFollower": {
+      "title": "Creator Follower",
+      "description": "Follow relationship stored under public_creators/{creatorId}/followers/{followerId}.",
+      "type": "object",
+      "properties": {
+        "followerId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "followerName": { "type": "string", "maxLength": 120 },
+        "followerHandle": { "type": "string", "maxLength": 48 },
+        "followerPhoto": { "type": "string", "maxLength": 200000 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["followerId", "targetId", "createdAt"]
+    },
+    "DmThread": {
+      "title": "Direct Message Thread",
+      "description": "1:1 private conversation between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array" },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "participants", "updatedAt"]
+    },
+    "DmMessage": {
+      "title": "Direct Message",
+      "description": "Individual chat message in a DM thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string", "maxLength": 120 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "videoId": { "type": "string", "maxLength": 128 },
+        "replyToId": { "type": "string", "maxLength": 128 },
+        "replyToSender": { "type": "string", "maxLength": 120 },
+        "replyToText": { "type": "string", "maxLength": 240 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "senderId", "text", "createdAt"]
+    },
+    "SocialRoom": {
+      "title": "Channel or Group Room",
+      "description": "Broadcast channel or collaborative community group.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["channel", "group"] },
+        "name": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 400 },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string", "maxLength": 120 },
+        "memberIds": { "type": "array" },
+        "membersCount": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "kind", "name", "ownerId", "memberIds", "createdAt"]
+    },
+    "SocialRoomMessage": {
+      "title": "Channel or Group Post/Message",
+      "description": "Post in a channel or message in a group.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string", "maxLength": 120 },
+        "senderHandle": { "type": "string", "maxLength": 48 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "senderId", "text", "createdAt"]
+    },
+    "SocialVideo": {
+      "title": "Published Video Post",
+      "description": "Motion video published by a creator to the community feed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string", "maxLength": 120 },
+        "authorHandle": { "type": "string", "maxLength": 48 },
+        "authorPhoto": { "type": "string", "maxLength": 200000 },
+        "title": { "type": "string", "maxLength": 140 },
+        "description": { "type": "string", "maxLength": 600 },
+        "videoUrl": { "type": "string", "maxLength": 1000 },
+        "posterUrl": { "type": "string", "maxLength": 200000 },
+        "tags": { "type": "array" },
+        "likedBy": { "type": "array" },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "viewsCount": { "type": "number" },
+        "durationSec": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "authorId", "authorName", "title", "videoUrl", "createdAt"]
+    },
+    "SocialVideoComment": {
+      "title": "Video Comment",
+      "description": "Comment on a published video.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string", "maxLength": 120 },
+        "text": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "authorId", "text", "createdAt"]
+    },
+    "UserNotification": {
+      "title": "User Notification",
+      "description": "Real-time message, reply, follow, or activity notification stored under users/{userId}/notifications/{notifId}.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string", "maxLength": 120 },
+        "senderHandle": { "type": "string", "maxLength": 48 },
+        "senderPhoto": { "type": "string", "maxLength": 200000 },
+        "kind": { "type": "string", "enum": ["dm_message", "dm_reply", "room_reply", "follow", "video_comment", "video_like"] },
+        "threadId": { "type": "string", "maxLength": 128 },
+        "messageId": { "type": "string", "maxLength": 128 },
+        "roomId": { "type": "string", "maxLength": 128 },
+        "videoId": { "type": "string", "maxLength": 128 },
+        "textPreview": { "type": "string", "maxLength": 400 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "recipientId", "senderId", "kind", "textPreview", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User private profile document"
+    },
+    "/users/{userId}/favorites/{docId}": {
+      "schema": { "$ref": "#/entities/UserFavoritesLibrary" },
+      "description": "Synced user favorites & quick access library"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/UserProjectCloud" },
+      "description": "User saved cloud projects"
+    },
+    "/community_templates/{templateId}": {
+      "schema": { "$ref": "#/entities/CommunityTemplate" },
+      "description": "Online community shared templates"
+    },
+    "/public_creators/{creatorId}": {
+      "schema": { "$ref": "#/entities/PublicCreator" },
+      "description": "Public searchable creator directory"
+    },
+    "/public_creators/{creatorId}/followers/{followerId}": {
+      "schema": { "$ref": "#/entities/CreatorFollower" },
+      "description": "Followers list for a creator"
+    },
+    "/dm_threads/{threadId}": {
+      "schema": { "$ref": "#/entities/DmThread" },
+      "description": "1:1 private direct message threads"
+    },
+    "/dm_threads/{threadId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/DmMessage" },
+      "description": "Messages inside a 1:1 DM thread"
+    },
+    "/social_rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/SocialRoom" },
+      "description": "Public broadcast channels and community groups"
+    },
+    "/social_rooms/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/SocialRoomMessage" },
+      "description": "Posts or chat messages inside a channel or group"
+    },
+    "/social_videos/{videoId}": {
+      "schema": { "$ref": "#/entities/SocialVideo" },
+      "description": "Published creator motion videos"
+    },
+    "/social_videos/{videoId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/SocialVideoComment" },
+      "description": "Comments on a published video"
+    },
+    "/users/{userId}/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/UserNotification" },
+      "description": "Private real-time notifications inbox for a user"
+    }
+  }
+}

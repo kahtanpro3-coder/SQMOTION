@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sqmotion
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.cjs
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
